@@ -1,0 +1,10 @@
+name: Dogtags
+main: fromgate.dogtags.Dogtags
+version: 0.0.2/2
+author: fromgate, fromgate@gmail.com
+commands:
+   dogtag:
+      description: Dogtags command
+      usage: |
+           /dogtag <help>   
+           
