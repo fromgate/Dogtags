@@ -31,7 +31,7 @@ import org.bukkit.entity.Player;
 public class DTCmd implements CommandExecutor{
 	Dogtags plg;
 
-	FGUtil u;
+	DTUtil u;
 
 	public DTCmd (Dogtags plg){
 		this.plg = plg;
@@ -78,7 +78,9 @@ public class DTCmd implements CommandExecutor{
 			u.PrintHLP(p);
 			return true;
 		} else if (cmd.equalsIgnoreCase("cfg")){
-			u.PrintCfg(p);
+			
+			//u.PrintCfg(p);
+			
 			return true;
 		} else if (cmd.equalsIgnoreCase("reload")){
 			plg.LoadCfg();

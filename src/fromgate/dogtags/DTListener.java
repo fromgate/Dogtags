@@ -22,8 +22,10 @@
 
 package fromgate.dogtags;
 
+import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
+import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -34,7 +36,9 @@ import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerItemHeldEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerPickupItemEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -42,20 +46,53 @@ import org.bukkit.potion.PotionEffectType;
 
 public class DTListener implements Listener{
 	Dogtags plg;
-	FGUtil u;
+	DTUtil u;
 
 	public DTListener (Dogtags plg){
 		this.plg = plg;
 		this.u = plg.u;
 	}
-
+	
+	@EventHandler(priority=EventPriority.NORMAL, ignoreCancelled = true)
+	public void onPlayerPickupItemEvent (PlayerPickupItemEvent event){
+		Item item = event.getItem();
+		if (item != null){
+			ItemStack itemStack = item.getItemStack();
+			if ((itemStack != null)&&(itemStack.getType() == Material.MAP)){
+				Player p = event.getPlayer();
+				Short mapid = itemStack.getDurability();
+				if (plg.dtags.containsValue(mapid))
+					p.sendMap(Bukkit.getMap(mapid));				
+			}
+		}
+	}
+	
+	@EventHandler(priority=EventPriority.NORMAL, ignoreCancelled = true)
+	public void onPlayerItemHeld (PlayerItemHeldEvent event){
+		Player p = event.getPlayer();
+		int itemSlot = event.getNewSlot();
+		if (itemSlot>=0){
+			ItemStack item = p.getInventory().getItem(itemSlot);
+			if ((item != null)&&(item.getType()==Material.MAP)){
+				Short mapid = p.getInventory().getItem(itemSlot).getDurability();
+				if (plg.dtags.containsValue(mapid))
+					p.sendMap(Bukkit.getMap(mapid));
+			}
+		}
+	}
 
 	@EventHandler(priority=EventPriority.NORMAL)
 	public void onPlayerJoin (PlayerJoinEvent event){
 		Player p = event.getPlayer();
 		plg.AddDogtag(p);
-		plg.sendMaps(p);
 		u.UpdateMsg(p);
+		
+		if ((p.getItemInHand()!=null)&&
+				(p.getItemInHand().getType()==Material.MAP)&&
+				(plg.dtags.containsKey(p.getItemInHand().getDurability())))
+			p.sendMap(Bukkit.getMap(p.getItemInHand().getDurability()));
+			
+		
 	}
 	
 	

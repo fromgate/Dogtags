@@ -1,6 +1,6 @@
 name: Dogtags
 main: fromgate.dogtags.Dogtags
-version: 0.0.2/2
+version: 0.0.2/4
 author: fromgate, fromgate@gmail.com
 commands:
    dogtag:

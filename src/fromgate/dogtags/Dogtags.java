@@ -44,8 +44,9 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
 
+
 public class Dogtags extends JavaPlugin {
-	
+
 	/* Пермишены:
 	 * dogtags.claim 		- Дает возможность срезать жетоны. Шанс обычный (минимальный)
 	 *                        + возможность на шанс критического удара обычным оружием 
@@ -65,23 +66,23 @@ public class Dogtags extends JavaPlugin {
 	int knife_chance = 100;
 	int knife_crit_chance = 50;
 	int knife_crit_dmg = 10;
-	
+
 	String weapon ="267,268,272,276";
 	int weapon_chance = 5;
 	int weapon_crit_chance = 10;
 	int weapon_crit_dmg = 3;
-	
+
 	boolean backstab_crit_only = true;
 	boolean backstab_sneak_only = true;
 	int backstab_angle=45;
-	
+
 	boolean harakiri = true;
 	int harakiri_dogtag_chance = 50;
 	String harakiri_weapon = "359";
 	int harakiri_cooldown = 30;  // кулдаун в секундах
 	int harakiri_try_delay = 1000; // время между попытками
 	int harakiri_clicks = 4;
-	
+
 
 	HashMap<String,Long> harakiri_time = new HashMap<String,Long>();
 	//HashMap<String,Long> harakiri_try = new HashMap<String,Long>();
@@ -95,14 +96,14 @@ public class Dogtags extends JavaPlugin {
 			this.tries = 1;
 		}
 	}
-	
+
 	String language = "english";
 	boolean vcheck = true;
 	boolean savelng = false;
-	
+
 	Image dtimg; //подложка
-	FGUtil u;	
-	
+	DTUtil u;	
+
 
 	//разные переменные
 	Logger log = Logger.getLogger("Minecraft");
@@ -111,7 +112,7 @@ public class Dogtags extends JavaPlugin {
 	private DTListener l;
 	String px = ChatColor.AQUA+"[dxp] "+ChatColor.WHITE;
 	Random random = new Random ();
-	
+
 	public boolean allowHarakiri(Player p){
 		String name = p.getName();
 		boolean ah = (p.hasPermission("dogtags.harakiri")&&
@@ -120,23 +121,23 @@ public class Dogtags extends JavaPlugin {
 				(p.getItemInHand() !=null)&&
 				(u.isIdInList(p.getItemInHand().getTypeId(), harakiri_weapon))&&
 				((!harakiri_time.containsKey(name)) || 
-				(harakiri_time.containsKey(name)&&((System.currentTimeMillis()-harakiri_time.get(name))>harakiri_cooldown*1000))));
-		
+						(harakiri_time.containsKey(name)&&((System.currentTimeMillis()-harakiri_time.get(name))>harakiri_cooldown*1000))));
+
 		if (ah) {
 			p.playEffect(EntityEffect.HURT);
 			p.addPotionEffect(new PotionEffect(PotionEffectType.CONFUSION,150,2));
 		}
 		return ah;
 	}
-	
-	
+
+
 	public int tryHarakiri (Player p){
 		String pn = p.getName();
 		Long time = System.currentTimeMillis();
 		if (harakiri_tries.containsKey(pn)&&((time-harakiri_tries.get(pn).time)<harakiri_try_delay)){
 			harakiri_tries.get(pn).tries++;
 		} else harakiri_tries.put(pn, new Try(time));
-		
+
 		return harakiri_tries.get(pn).tries;
 	}
 
@@ -145,18 +146,19 @@ public class Dogtags extends JavaPlugin {
 		SaveDogtags();
 		dtags.clear();
 		dtimg.flush();
-		
-		
-		
+
+
+
 	}
-	
+
 	@Override
 	public void onEnable() {
-		
+
 		LoadCfg();
 		SaveCfg();
-		
-		u = new FGUtil (this,vcheck,savelng,language);
+
+		u = new DTUtil (this, vcheck, savelng, language,"dotgags","Dogtags","dogtag",ChatColor.DARK_AQUA+"[DT] "+ ChatColor.WHITE);
+
 		cmd = new DTCmd (this);
 		getCommand("dogtag").setExecutor(cmd);
 		des = getDescription();
@@ -166,14 +168,14 @@ public class Dogtags extends JavaPlugin {
 		LoadDTImg();
 		LoadDogtags();
 		log.info("[Dogtags] Loaded "+Integer.toString(dtags.size())+ " dogtags...");
-		
+
 		try {
-		    MetricsLite metrics = new MetricsLite(this);
-		    metrics.start();
+			MetricsLite metrics = new MetricsLite(this);
+			metrics.start();
 		} catch (IOException e) {
 			log.info("[Dogtags] failed to submit stats to the Metrics (mcstats.org)");
 		}
-		
+
 	}
 
 	private void LoadDTImg(){
@@ -189,10 +191,10 @@ public class Dogtags extends JavaPlugin {
 		MapView map = Bukkit.getServer().getMap(id);
 		DTRenderer mr = new DTRenderer (this, pname);
 		mr.initialize(map);
-        for (MapRenderer r : map.getRenderers()) map.removeRenderer(r);
+		for (MapRenderer r : map.getRenderers()) map.removeRenderer(r);
 		map.addRenderer(mr);
 	}
-	
+
 	public short createMap(Player p){
 		MapView map = Bukkit.getServer().createMap(p.getWorld());
 		map.setCenterX(Integer.MAX_VALUE);
@@ -202,7 +204,7 @@ public class Dogtags extends JavaPlugin {
 		map.getRenderers().clear();
 		map.addRenderer(mr);
 		p.sendMap(map);
-	return map.getId();
+		return map.getId();
 	}
 
 
@@ -221,9 +223,9 @@ public class Dogtags extends JavaPlugin {
 		} catch (Exception e){
 			e.printStackTrace();
 		}
-		
+
 	}
-	
+
 	public void SaveDogtags(){
 		if (dtags.size()>0){
 			try{
@@ -240,7 +242,7 @@ public class Dogtags extends JavaPlugin {
 			}
 		}
 	}
-	
+
 	public void LoadCfg(){
 		language = getConfig().getString("general.language","english");
 		vcheck = getConfig().getBoolean("general.check-updates",true);
@@ -263,7 +265,7 @@ public class Dogtags extends JavaPlugin {
 		harakiri_try_delay=getConfig().getInt("harakiri.click-delay",1000);
 		harakiri_clicks=getConfig().getInt("harakiri.click-count",5);
 	}
-	
+
 	public void SaveCfg(){
 		getConfig().set("general.language",language);
 		getConfig().set("general.check-updates",vcheck);
@@ -286,12 +288,16 @@ public class Dogtags extends JavaPlugin {
 		getConfig().set("harakiri.click-count",harakiri_clicks);
 		saveConfig();
 	}
-	
-	
-	public void sendMaps (Player p){
-		for (String pn : dtags.keySet())			
-			p.sendMap(Bukkit.getMap(dtags.get(pn))); 
-	}
+
+	/*
+	public void sendMaps (final Player p){
+		Bukkit.getScheduler().scheduleAsyncDelayedTask(this, new Runnable() {
+			public void run() {
+				for (String pn : dtags.keySet())			
+					p.sendMap(Bukkit.getMap(dtags.get(pn)));
+			}
+		}, 30L);
+	}*/
 
 	public void AddDogtag (Player p){
 		if (!dtags.containsKey(p.getName())) {
