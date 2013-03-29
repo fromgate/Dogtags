@@ -22,15 +22,13 @@
 
 package fromgate.dogtags;
 	
-	
-	import org.bukkit.entity.Player;
-	import org.bukkit.map.MapCanvas;
-	import org.bukkit.map.MapRenderer;
-	import org.bukkit.map.MapView;
-	import org.bukkit.map.MinecraftFont;
+import org.bukkit.entity.Player;
+import org.bukkit.map.MapCanvas;
+import org.bukkit.map.MapRenderer;
+import org.bukkit.map.MapView;
+import org.bukkit.map.MinecraftFont;
 	
 	public class DTRenderer extends MapRenderer {
-		
 		Dogtags plg;
 		String pname;
 		
@@ -40,15 +38,16 @@ package fromgate.dogtags;
 			this.pname =  pname;
 		}
 		
-	
 		@Override
 		public void render(MapView map, MapCanvas canvas, Player p) {
-	        for (int j = 0; j < 128; j++) 
-	            for (int i = 0; i < 128; i++)
-	              canvas.setPixel(i, j, (byte) 0);
-	        if (plg.dtimg != null) canvas.drawImage(0, 0, plg.dtimg);
-	        canvas.drawText(30, 63-(MinecraftFont.Font.getHeight()/2), MinecraftFont.Font, pname);
-	        canvas.drawText(2, 127-MinecraftFont.Font.getHeight(), MinecraftFont.Font, "§54;Dogtags by fromgate");
+			if (!plg.rh.isRendered(p, map.getId())){
+				for (int j = 0; j < 128; j++) 
+		            for (int i = 0; i < 128; i++)
+		              canvas.setPixel(i, j, (byte) 0);
+		        if (plg.dtimg != null) canvas.drawImage(0, 0, plg.dtimg);
+		        
+		        canvas.drawText(30, 63-(MinecraftFont.Font.getHeight()/2), MinecraftFont.Font, pname);
+		        if (!plg.chocolate) canvas.drawText(2, 127-MinecraftFont.Font.getHeight(), MinecraftFont.Font, "§54;Dogtags by fromgate");
+			}
 		}
-	
 	}

@@ -35,6 +35,7 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.inventory.CraftItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemHeldEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
@@ -52,7 +53,7 @@ public class DTListener implements Listener{
 		this.plg = plg;
 		this.u = plg.u;
 	}
-	
+
 	@EventHandler(priority=EventPriority.NORMAL, ignoreCancelled = true)
 	public void onPlayerPickupItemEvent (PlayerPickupItemEvent event){
 		Item item = event.getItem();
@@ -66,7 +67,7 @@ public class DTListener implements Listener{
 			}
 		}
 	}
-	
+
 	@EventHandler(priority=EventPriority.NORMAL, ignoreCancelled = true)
 	public void onPlayerItemHeld (PlayerItemHeldEvent event){
 		Player p = event.getPlayer();
@@ -84,18 +85,16 @@ public class DTListener implements Listener{
 	@EventHandler(priority=EventPriority.NORMAL)
 	public void onPlayerJoin (PlayerJoinEvent event){
 		Player p = event.getPlayer();
+		plg.rh.clearHistory(p);
 		plg.AddDogtag(p);
 		u.UpdateMsg(p);
-		
 		if ((p.getItemInHand()!=null)&&
 				(p.getItemInHand().getType()==Material.MAP)&&
 				(plg.dtags.containsKey(p.getItemInHand().getDurability())))
 			p.sendMap(Bukkit.getMap(p.getItemInHand().getDurability()));
-			
-		
 	}
-	
-	
+
+
 	@EventHandler(priority=EventPriority.NORMAL, ignoreCancelled = true)
 	public void onHarakiri (PlayerInteractEvent event){
 		Player p = event.getPlayer();
@@ -104,99 +103,144 @@ public class DTListener implements Listener{
 				((event.getAction() == Action.RIGHT_CLICK_BLOCK)||(event.getAction() == Action.RIGHT_CLICK_AIR))&&
 				plg.allowHarakiri(p)&&(plg.tryHarakiri(p)>plg.harakiri_clicks)){
 			plg.harakiri_time.put(p.getName(), System.currentTimeMillis());
-			p.damage(p.getHealth(),p);
+			p.damage(1000,p);
 		}
 	}
-	
+
 
 	@EventHandler(priority=EventPriority.NORMAL, ignoreCancelled = true)
 	public void onCritDmg (EntityDamageEvent event){
 		if ((event.getEntity() instanceof Player)&&(event.getCause() == DamageCause.ENTITY_ATTACK)){
 			Player p = (Player) event.getEntity();
 			EntityDamageByEntityEvent evdm = (EntityDamageByEntityEvent) event;
-
 			if (evdm.getDamager() instanceof Player){
-			
 				Player dp = (Player) evdm.getDamager();
 				if (p.equals(dp)) return; //харакири...
-				
-				if (plg.backstab_crit_only&&dp.hasPermission("dogtags.backstab")&&(!(plg.backstab_sneak_only&&(!dp.isSneaking())))){
-					int paz = (int) (p.getLocation().getYaw() + 180 + 360) % 360;
-					int dpaz = (int) (dp.getLocation().getYaw() + 180 + 360) % 360;
-					int angle = Math.max(paz, dpaz)-Math.min(paz, dpaz);
-					if (angle>180) angle = 360-angle;					
-					if (angle>plg.backstab_angle) return;
-				}
-
-				
-				if (dp.hasPermission("dogtags.claim")&&(dp.getItemInHand() != null)&&(dp.getItemInHand().getTypeId()>0)){
-					int chance = 0;
-					int dmg = 0;
+				if (!isBackstab(dp, p)) return;
+				int chance = 0;
+				int dmg = 0;
+				if (canCutDogtag(dp)){
 					int id = dp.getItemInHand().getTypeId();
-					
 					if (u.isIdInList(id, plg.weapon)) {
 						chance = plg.weapon_crit_chance;
 						dmg = plg.weapon_crit_dmg;
-					} else if (dp.hasPermission("dogtags.knife")&&(u.isIdInList(id, plg.knife))){
+					} else if (u.isIdInList(id, plg.knife)){
 						chance = plg.knife_crit_chance;
 						dmg = plg.knife_crit_dmg;
 					}
-					
-					if (u.random.nextInt(100)<chance){
-						event.setDamage(event.getDamage()+dmg);
-						p.addPotionEffect(new PotionEffect(PotionEffectType.CONFUSION,150,2));
-						
-						if (plg.backstab_crit_only){
-							u.PrintMSG(dp, "msg_bstab_deal", p.getName(),'e','6');
-							u.PrintMSG(p, "msg_bstab_receive", dp.getName(),'c','4');
-						} else {
-							u.PrintMSG(dp, "msg_crit_deal", p.getName(),'e','6');
-							u.PrintMSG(p, "msg_crit_receive", dp.getName(),'c','4');	
-						}
+				} else if (canCutHead(dp)){
+					int id = dp.getItemInHand().getTypeId();
+					if (u.isIdInList(id, plg.weapon)) {
+						chance = plg.weapon_crit_chance;
+						dmg = plg.weapon_crit_dmg;
+					} else if (u.isIdInList(id, plg.axe)){
+						chance = plg.axe_crit_chance;
+						dmg = plg.axe_crit_dmg;
+					}
+				}
+
+				if ((chance>0)&&u.rollDiceChance(chance)){
+					event.setDamage(event.getDamage()+dmg);
+					p.addPotionEffect(new PotionEffect(PotionEffectType.CONFUSION,150,2));
+					if (plg.backstab_crit_only){
+						u.printMSG(dp, "msg_bstab_deal",'e','6', p.getName());
+						u.printMSG(p, "msg_bstab_receive",'c','4', dp.getName());
+					} else {
+						u.printMSG(dp, "msg_crit_deal",'e','6', p.getName());
+						u.printMSG(p, "msg_crit_receive",'c','4', dp.getName());	
 					}
 				}
 			}
 		}
 	}
-	
-	
 
-	//@EventHandler(priority=EventPriority.NORMAL, ignoreCancelled = true)
-	@EventHandler(priority=EventPriority.NORMAL)
+
+
+	@EventHandler(priority=EventPriority.HIGH, ignoreCancelled = true)
 	public void onClaimDogtagAndHarakiri (PlayerDeathEvent event){
-		
-		if (event.getEntity().getKiller() ==null) return;
+		if (event.getEntity().getKiller() == null) return;
 		Player p = event.getEntity();
 		Player killer = event.getEntity().getKiller();
-		if (!(killer.hasPermission("dogtags.harakiri")||killer.hasPermission("dogtags.claim"))) return;
-		
+		if (!(killer.hasPermission("dogtags.harakiri")||
+				killer.hasPermission("dogtags.claim")||
+				killer.hasPermission("dogtags.beheader"))) return;
+
 		short map_id=-1;
 		if (plg.dtags.containsKey(p.getName())) map_id=plg.dtags.get(p.getName());
 		else {
 			map_id = plg.createMap(p);
 			plg.SaveDogtags();
 		}
-		
-		
+
 		if (killer.equals(p)&&p.hasPermission("dogtags.harakiri")) {
 			if ((u.random.nextInt(100)<plg.harakiri_dogtag_chance)&&(map_id>=0)&&p.hasPermission("dogtags.claim"))
 				p.getWorld().dropItemNaturally(p.getLocation().add(u.random.nextInt(2)-1, u.random.nextInt(2), u.random.nextInt(2)-1), new ItemStack (Material.MAP.getId(), 1, map_id));
-			
-			event.setDeathMessage(u.MSG("msg_harakiri",p.getName(),'6','4'));
+			event.setDeathMessage(u.getMSG("msg_harakiri",'6','4',p.getName()));
 			return;
-		} else if ((killer.getItemInHand() != null)&&(killer.getItemInHand().getTypeId()>0)&&(killer.hasPermission("dogtags.claim"))){
-				int chance = 0; 
-				int id = killer.getItemInHand().getTypeId();
-				if (u.isIdInList(id, plg.weapon)) chance = plg.weapon_chance;
-				else if (killer.hasPermission("dogtags.knife")&&(u.isIdInList(id, plg.knife))) chance = plg.knife_chance;
-				if ((chance>0)&&(u.random.nextInt(100)<chance)){
-					if (map_id>=0){
-						p.getWorld().dropItemNaturally(p.getLocation().add(u.random.nextInt(2)-1, u.random.nextInt(2), u.random.nextInt(2)-1), new ItemStack (Material.MAP.getId(), 1, map_id));
-						event.setDeathMessage(u.MSG("msg_death",killer.getName()+";"+p.getName(),'e','6'));
-					}
+		} else if (canCutDogtag(killer)) {
+			int chance = plg.weapon_chance;
+			int id = killer.getItemInHand().getTypeId();
+			if (u.isIdInList(id, plg.knife)) chance = plg.knife_chance;
+			if ((chance>0)&&(u.rollDiceChance(chance))){
+				if (map_id>=0){
+					p.getWorld().dropItemNaturally(p.getLocation().add(u.random.nextInt(2)-1, u.random.nextInt(2), u.random.nextInt(2)-1), new ItemStack (Material.MAP.getId(), 1, map_id));
+					event.setDeathMessage(u.getMSG("msg_death",'e','6',killer.getName(),p.getName()));
 				}
 			}
+		} else if (canCutHead (killer)){
+			int chance = plg.weapon_chance;
+			int id = killer.getItemInHand().getTypeId();
+			if (u.isIdInList(id, plg.axe)) chance = plg.axe_chance;
+			if (u.rollDiceChance(chance)){
+				plg.dropHead(p.getLocation().add(0, 1, 0), p.getName());
+				event.setDeathMessage(u.getMSG("msg_behead",'e','6',killer.getName(),p.getName()));
+			}
 		}
+	}
+
+	@EventHandler(priority=EventPriority.NORMAL, ignoreCancelled = true)
+	public void onItemCraft (CraftItemEvent event){
+		if ((event.getCurrentItem().getType()==Material.MAP)&&
+				(plg.isMapIsDogtag(event.getCurrentItem().getDurability())))
+			event.setCancelled(true);
+	}
+
+
+	/* 
+	 * params:
+	 * @dp - тот кто бьет
+	 * @p - пострадавший
+	 * 
+	 */
+	public boolean isBackstab(Player dp, Player p){
+		if (!plg.backstab_crit_only) return true;
+		if (!dp.hasPermission("dogtags.backstab")) return false;
+		if (!(plg.backstab_sneak_only&&(!dp.isSneaking()))){
+			int paz = (int) (p.getLocation().getYaw() + 180 + 360) % 360;
+			int dpaz = (int) (dp.getLocation().getYaw() + 180 + 360) % 360;
+			int angle = Math.max(paz, dpaz)-Math.min(paz, dpaz);
+			if (angle>180) angle = 360-angle;					
+			if (angle>plg.backstab_angle) return false;
+		}
+		return true;
+	}
+
+
+	public boolean canCutDogtag(Player p){
+		return p.hasPermission("dogtags.claim")&&
+				((p.getItemInHand() != null)&&(p.getItemInHand().getTypeId()>0)&&
+						((u.isIdInList(p.getItemInHand().getTypeId(), plg.knife))||
+								(plg.weapon_dogtags&&u.isIdInList(p.getItemInHand().getTypeId(), plg.weapon)))&&
+								(!DTRgDisable.isDogatgsDisabledRegion(p.getLocation())));
+	}
+
+	public boolean canCutHead(Player p){
+		return p.hasPermission("dogtags.beheader")&&
+				((p.getItemInHand() != null)&&(p.getItemInHand().getTypeId()>0)&&
+						((u.isIdInList(p.getItemInHand().getTypeId(), plg.axe))||
+								(plg.weapon_heads&&u.isIdInList(p.getItemInHand().getTypeId(), plg.weapon)))&&
+								(!DTRgDisable.isDogatgsDisabledRegion(p.getLocation())));
+	}
 	
 
 }

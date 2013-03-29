@@ -1,6 +1,7 @@
 name: Dogtags
 main: fromgate.dogtags.Dogtags
-version: 0.0.2/4
+version: 0.0.5
+load: POSTWORLD
 author: fromgate, fromgate@gmail.com
 commands:
    dogtag:
